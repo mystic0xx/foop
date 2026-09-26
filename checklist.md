@@ -7,8 +7,8 @@
 - [x] `packages/cli/package.json`
 - [x] Root `tsconfig.json` + per-package `tsconfig.json`
 
-## 2. `packages/core` — shared types
-- [ ] `src/types.ts` — `WorkloadFile`, `WorkloadStep`, `SimulationResult`, `StepSimulation`, `ExecutionResult`, `TxRecord`
+## 2. `packages/core` — shared types ✅
+- [x] `src/types.ts` — `WorkloadFile`, `WorkloadStep`, `SimulationResult`, `StepSimulation`, `ExecutionResult`, `TxRecord`
 
 ## 3. `packages/core` — ABI resolver
 - [ ] `src/abi-resolver.ts` — fetch verified ABI from Blockscout by chain ID + address
