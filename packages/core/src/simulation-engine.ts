@@ -243,6 +243,15 @@ export async function simulateWorkload(
 ): Promise<SimulationResult> {
   const { client, walletAddress, steps, chainId } = opts;
 
+  // Validate RPC chain matches workload chain
+  const rpcChainId = await client.getChainId();
+  if (rpcChainId !== chainId) {
+    throw new Error(
+      `Chain mismatch: workload specifies chain ${chainId} but RPC returned chain ${rpcChainId}. ` +
+        `Check your RPC URL or the "chain" field in your workload file.`
+    );
+  }
+
   // Fetch shared chain state once
   const [nativeBalance, feeData] = await Promise.all([
     client.getBalance({ address: walletAddress }),
