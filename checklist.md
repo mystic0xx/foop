@@ -74,7 +74,7 @@
 - [x] Large workload warning (> 500 txs) even on testnet — `simulate.ts` + `run.ts`
 - [x] Never run to fund exhaustion — hard executable bound — `simulation-engine.ts` + `execution-controller.ts`
 
-## 12. Testing
-- [ ] Unit tests for simulation engine (mock viem client)
-- [ ] Unit tests for workload planner (edge cases: 0 balance, exact balance, ERC-20 path)
-- [ ] Integration test: `foop simulate` against a public testnet RPC (WETH on Base Sepolia)
+## 12. Testing ✅
+- [x] Unit tests for simulation engine (mock viem client)
+- [x] Unit tests for workload planner (edge cases: 0 balance, exact balance, ERC-20 path)
+- [ ] Integration test: `foop simulate` against a public testnet RPC (WETH on Base Sepolia) — manual

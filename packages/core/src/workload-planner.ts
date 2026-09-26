@@ -74,7 +74,13 @@ export function validateWorkload(file: WorkloadFile): ValidationResult {
       );
     }
 
-    // Validate repeat
+    // Validate repeat — inputs must already be resolved to a number
+    if (typeof step.repeat !== "number") {
+      throw new WorkloadValidationError(
+        `Step ${i + 1}: unresolved "repeat" (${JSON.stringify(step.repeat)}). ` +
+          `Interactive inputs must be applied before validation.`
+      );
+    }
     if (!Number.isInteger(step.repeat) || step.repeat < 1) {
       throw new WorkloadValidationError(
         `Step ${i + 1}: "repeat" must be a positive integer, got ${step.repeat}.`

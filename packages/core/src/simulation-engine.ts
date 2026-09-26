@@ -89,7 +89,8 @@ export async function simulateStep(
   } = opts;
 
   const valuePerTx = step.value ? BigInt(step.value) : 0n;
-  const requested = step.repeat;
+  const requested =
+    typeof step.repeat === "number" ? step.repeat : Number(step.repeat);
 
   // 1. Resolve ABI
   const { abi } = await resolveAbi({
@@ -170,7 +171,7 @@ export async function simulateStep(
   let maxByToken: number | null = null;
   if (isTransferFrom(step.function) && step.args && step.args.length >= 3) {
     // transferFrom(address from, address to, uint256 amount) — token is the contract
-    const tokenAmount = BigInt(step.args[2]);
+    const tokenAmount = BigInt(step.args[2] as string | number | bigint);
     if (tokenAmount > 0n) {
       try {
         const tokenBalance = await client.readContract({

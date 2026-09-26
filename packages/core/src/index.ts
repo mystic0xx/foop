@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./abi-resolver.js";
+export * from "./workload-input.js";
 export * from "./simulation-engine.js";
 export * from "./workload-planner.js";
 export * from "./nonce-manager.js";

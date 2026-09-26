@@ -11,12 +11,40 @@ export interface WorkloadStep {
   function: string;
   /** Optional ABI for this step. If omitted, resolved via Blockscout or signature. */
   abi?: Abi;
-  /** Positional arguments matching the function signature. All values as strings. */
-  args?: string[];
-  /** Native value to send with the call, in wei (as a string to avoid precision loss). */
+  /**
+   * Positional arguments matching the function signature. Values are strings for
+   * scalars; a tuple/struct parameter is a nested array of strings. May contain
+   * `{amount}` / `{count}` placeholders resolved by `applyWorkloadInputs`.
+   */
+  args?: unknown[];
+  /** Native value to send with the call, in wei (string). May be a `{amount}` placeholder. */
   value?: string;
-  /** Number of times to repeat this step. Must be >= 1. */
-  repeat: number;
+  /** Number of times to repeat this step (>= 1), or a `{count}` placeholder string. */
+  repeat: number | string;
+}
+
+/**
+ * Declares interactive inputs prompted at run time by the CLI. When present, the
+ * CLI asks for an amount and a count, then substitutes them into step
+ * `args` / `value` / `repeat` via the `{amount}` / `{count}` placeholders.
+ */
+export interface WorkloadInput {
+  /** Token whose decimals convert the human amount → wei. Omit to treat the amount as raw wei. */
+  amountToken?: Address;
+  /** Prompt label for the amount. Default: "Amount per transaction". */
+  amountPrompt?: string;
+  /** Prompt label for the count. Default: "Number of times to repeat". */
+  countPrompt?: string;
+}
+
+/** Ensures an ERC-20 allowance exists before the steps execute. */
+export interface WorkloadApprove {
+  /** ERC-20 token to approve (typically the swap's tokenIn). */
+  token: Address;
+  /** Spender. Defaults to the first step's `contract`. */
+  spender?: Address;
+  /** "total" (amountWei × count), "max" (uint256 max), or an explicit wei string. Default "total". */
+  amount?: "total" | "max" | (string & {});
 }
 
 export interface WorkloadFile {
@@ -26,6 +54,10 @@ export interface WorkloadFile {
   chain: number;
   /** Optional RPC URL. Falls back to FOOP_RPC_URL env var. */
   rpc?: string;
+  /** Optional interactive inputs prompted at run time. */
+  input?: WorkloadInput;
+  /** Optional ERC-20 approval ensured before executing steps. */
+  approve?: WorkloadApprove;
   /** Ordered list of steps to execute. */
   steps: WorkloadStep[];
 }
