@@ -1,2 +1,134 @@
-# foop
-on-chain workload runner for blockchain devs: define, simulate and execute repeatable throw-away transaction workloads w/o writing one-off scripts or manually signing transactions.
+# Foop
+
+> Stop writing scripts for throwaway on-chain workloads. Just Foop it!
+
+Foop lets blockchain developers define, simulate, and execute repeatable on-chain workloads without writing one-off transaction scripts.
+
+## Why
+
+Seeding protocol activity, populating test environments, or reproducing a transaction sequence shouldn't require a custom Foundry/viem/ethers script every time. Foop turns:
+
+```
+Explorer → click → sign → wait → repeat ×100
+```
+
+into:
+
+```
+Define → Simulate → Review → Execute → Observe
+```
+
+## How it works
+
+### 1. Define
+
+Connect your wallet, paste a contract address, select a function, set your arguments and iteration count.
+
+```
+Network:    Base Sepolia
+Contract:   WETH
+Function:   deposit()
+Value:      0.01 ETH
+Iterations: 100
+```
+
+### 2. Simulate
+
+Before you sign anything, Foop checks your balances, estimates gas, detects expected reverts, and tells you exactly how many transactions are executable.
+
+```
+100 transactions requested
+
+Estimated gas      0.021 ETH
+Transaction value  1.000 ETH
+Wallet balance     0.843 ETH
+
+Executable         84
+Blocked by         ETH balance
+
+Suggested bound    84
+```
+
+### 3. Execute
+
+After you approve the plan, Foop manages nonces, submits transactions, tracks receipts, and shows live progress.
+
+```
+84 / 84 transactions
+
+████████████████████
+
+84 confirmed  0 failed  0 pending
+
+Total gas: 0.0178 ETH
+```
+
+### 4. Observe
+
+Full run summary: confirmed, failed, pending counts, total and average gas, and explorer links for every transaction.
+
+## Use cases
+
+- Protocol testing
+- Testnet seeding
+- Indexer development
+- Analytics testing
+- Frontend development
+- Reproducing protocol states
+- Load testing / QA
+- Demo and staging environments
+
+## Stack
+
+- **Next.js / React** — web UI
+- **TypeScript** — end to end
+- **viem** — chain interaction
+- **Browser wallet** — signing (Foop never holds private keys)
+- **EVM-compatible chains** — Base, Base Sepolia, and more
+
+## Packages
+
+| Package | Description |
+|---|---|
+| `@foop/core` | Simulation engine, workload planner, execution controller — shared between CLI and web |
+| `@foop/cli` | Terminal interface: `foop simulate`, `foop run`, `foop init` |
+
+## CLI (in progress)
+
+```bash
+# Dry-run a workload file — no signing required
+foop simulate workload.json
+
+# Simulate then execute with confirmation
+foop run workload.json
+
+# Interactively scaffold a workload file
+foop init
+```
+
+Workload files are plain JSON and version-control friendly:
+
+```json
+{
+  "version": "1",
+  "chain": 84532,
+  "steps": [
+    {
+      "contract": "0x4200000000000000000000000000000000000006",
+      "function": "deposit()",
+      "value": "10000000000000000",
+      "repeat": 100
+    }
+  ]
+}
+```
+
+## Security
+
+Foop does not custody private keys. All transactions are normal user-authorized wallet interactions. Simulation always runs before execution. The requested iteration count is a hard upper bound — Foop will never silently run until funds are exhausted.
+
+## Roadmap
+
+- **V1** — Web UI: define, simulate, execute, observe
+- **V1.5** — Saved workloads, workload history, multi-step workloads, reusable templates
+- **V2** — CLI, CI/CD, workload files, team sharing, agent-callable execution API
