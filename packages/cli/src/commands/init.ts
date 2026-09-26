@@ -77,16 +77,17 @@ export async function runInit(_args: string[]): Promise<void> {
 
     if (resolvedAbi.source === "blockscout") {
       // Extract write functions from verified ABI
-      const writeFns = resolvedAbi.abi
+      const writeFns = (resolvedAbi.abi as ReadonlyArray<Record<string, unknown>>)
         .filter(
-          (e): e is { type: "function"; name: string; inputs: { type: string }[]; stateMutability: string } =>
+          (e) =>
             e.type === "function" &&
-            "stateMutability" in e &&
+            typeof e.stateMutability === "string" &&
             e.stateMutability !== "view" &&
             e.stateMutability !== "pure"
         )
         .map((fn) => {
-          const sig = `${fn.name}(${fn.inputs.map((i) => i.type).join(",")})`;
+          const inputs = (fn.inputs as { type: string }[] | undefined) ?? [];
+          const sig = `${fn.name as string}(${inputs.map((i) => i.type).join(",")})`;
           return { value: sig, label: sig };
         });
 
