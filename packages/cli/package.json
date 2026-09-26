@@ -10,7 +10,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-vm-modules ../../node_modules/.bin/jest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",

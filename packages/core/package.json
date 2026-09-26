@@ -15,7 +15,7 @@
     "build": "tsc --project tsconfig.json",
     "dev": "tsc --project tsconfig.json --watch",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-vm-modules ../../node_modules/.bin/jest"
+    "test": "vitest run"
   },
   "dependencies": {
     "viem": "^2.21.19"
