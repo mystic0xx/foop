@@ -42,8 +42,10 @@ Automatic ABI resolution works on chains with a mapped Blockscout instance:
 | Polygon | 137 | polygon.blockscout.com |
 | Sepolia | 11155111 | eth-sepolia.blockscout.com |
 
-On chains without Blockscout coverage, supply an `abi` field or a precise
-function signature — see [ABI resolution](abi-resolution.md).
+On chains without Blockscout coverage, Foop falls back to Etherscan (with
+`ETHERSCAN_API_KEY`) and then Sourcify — both multichain — before asking for an
+`abi` field or a precise function signature. See
+[ABI resolution](abi-resolution.md).
 
 ## Mainnet chains (guarded)
 

@@ -4,6 +4,7 @@ import {
   encodeFunctionData,
 } from "viem";
 import { resolveAbi } from "./abi-resolver.js";
+import { decodeRevertReason } from "./revert-decoder.js";
 import type {
   BlockedByReason,
   SimulationResult,
@@ -118,7 +119,7 @@ export async function simulateStep(
       value: valuePerTx,
     });
   } catch (err: unknown) {
-    revertReason = err instanceof Error ? err.message : String(err);
+    revertReason = await decodeRevertReason(err, { abi });
     // A revert means 0 executable iterations
     return {
       stepIndex,

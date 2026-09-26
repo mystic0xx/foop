@@ -49,7 +49,11 @@ type BlockedByReason =
 * Any step with `executable < requested` → the workload is constrained;
   `foop simulate` exits 1 and reports `blockedBy`.
 * `blockedBy === "revert"` → the call fails statically; check `revertReason`.
-  Nothing in that step is executable.
+  Nothing in that step is executable. Foop decodes the reason from the revert
+  data — standard `Error(string)` / `Panic(uint256)`, custom errors in the step
+  ABI, and unknown selectors resolved via the openchain.xyz signature database —
+  so you see e.g. `custom error InsufficientReputation(0, 10000)` rather than a
+  generic "execution reverted".
 
 ## Related
 

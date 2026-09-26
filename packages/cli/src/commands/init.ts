@@ -6,6 +6,7 @@ import type { WorkloadFile, WorkloadStep } from "@foop/core";
 import {
   printError,
   printDivider,
+  printFoopBanner,
 } from "../renderer/progress.js";
 
 // ---------------------------------------------------------------------------
@@ -14,6 +15,7 @@ import {
 
 const CHAINS = [
   { value: "84532", label: "Base Sepolia (84532)" },
+  { value: "421614", label: "Arbitrum Sepolia (421614)" },
   { value: "8453",  label: "Base (8453)" },
   { value: "1",     label: "Ethereum Mainnet (1)" },
   { value: "10",    label: "Optimism (10)" },
@@ -28,7 +30,7 @@ const CHAINS = [
 // ---------------------------------------------------------------------------
 
 export async function runInit(_args: string[]): Promise<void> {
-  console.log("");
+  printFoopBanner();
   p.intro("  foop init — scaffold a workload file");
 
   // 1. Chain
@@ -63,10 +65,17 @@ export async function runInit(_args: string[]): Promise<void> {
 
   // 4. Try to fetch ABI
   const spinner = p.spinner();
-  spinner.start("Fetching ABI from Blockscout…");
+  spinner.start("Fetching ABI (Blockscout → Etherscan → Sourcify)…");
 
   let functionOptions: Array<{ value: string; label: string }> = [];
   let resolvedAbi;
+
+  const VERIFIED_SOURCES = ["blockscout", "etherscan", "sourcify"] as const;
+  const SOURCE_LABEL: Record<string, string> = {
+    blockscout: "Blockscout",
+    etherscan: "Etherscan",
+    sourcify: "Sourcify",
+  };
 
   try {
     resolvedAbi = await resolveAbi({
@@ -75,7 +84,8 @@ export async function runInit(_args: string[]): Promise<void> {
       functionSignature: "fallback()",
     });
 
-    if (resolvedAbi.source === "blockscout") {
+    if ((VERIFIED_SOURCES as readonly string[]).includes(resolvedAbi.source)) {
+      const where = SOURCE_LABEL[resolvedAbi.source] ?? resolvedAbi.source;
       // Extract write functions from verified ABI
       const writeFns = (resolvedAbi.abi as ReadonlyArray<Record<string, unknown>>)
         .filter(
@@ -93,12 +103,18 @@ export async function runInit(_args: string[]): Promise<void> {
 
       if (writeFns.length > 0) {
         functionOptions = writeFns;
-        spinner.stop(`ABI fetched — ${writeFns.length} writable function(s) found`);
+        spinner.stop(
+          `ABI fetched from ${where} — ${writeFns.length} writable function(s) found`
+        );
       } else {
-        spinner.stop("ABI fetched but no writable functions found — enter manually");
+        spinner.stop(
+          `ABI fetched from ${where} but no writable functions found — enter manually`
+        );
       }
     } else {
-      spinner.stop("Contract not verified on Blockscout — enter function manually");
+      spinner.stop(
+        "Contract not verified on Blockscout, Etherscan, or Sourcify — enter function manually"
+      );
     }
   } catch {
     spinner.stop("Could not fetch ABI — enter function manually");

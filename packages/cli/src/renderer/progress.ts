@@ -45,6 +45,43 @@ function lpad(s: string, width: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Big "netted" FOOP banner
+//
+// Each glyph is a 6-row bitmap. A set bit renders as a netted 2-cell block
+// (alternating rows of ▛▜ / ▙▟-style mesh) so the letters read as a woven net
+// rather than a flat fill. Cleared bits are blank.
+// ---------------------------------------------------------------------------
+
+const FOOP_GLYPHS: Record<string, string[]> = {
+  F: ["1111", "1000", "1110", "1000", "1000", "1000"],
+  O: ["1111", "1001", "1001", "1001", "1001", "1111"],
+  P: ["1111", "1001", "1111", "1000", "1000", "1000"],
+};
+
+// Two net tiles, swapped every other row, give a fishnet weave.
+const NET_TILES = ["▚▞", "▞▚"];
+
+export function printFoopBanner(): void {
+  const word = "FOOP";
+  const rows = 6;
+  console.log("");
+  for (let r = 0; r < rows; r++) {
+    const tile = NET_TILES[r % NET_TILES.length];
+    let line = "  ";
+    for (const ch of word) {
+      const glyph = FOOP_GLYPHS[ch];
+      const bits = glyph[r];
+      for (const bit of bits) {
+        line += bit === "1" ? tile : "  ";
+      }
+      line += "  "; // gap between letters
+    }
+    console.log(cyan(bold(line)));
+  }
+  console.log("");
+}
+
+// ---------------------------------------------------------------------------
 // Section header
 // ---------------------------------------------------------------------------
 
@@ -132,7 +169,16 @@ function printStepSimulation(step: StepSimulation): void {
   }
 
   if (step.revertReason) {
-    rows.push(["Revert reason", red(step.revertReason.slice(0, 60))]);
+    const reason = step.revertReason;
+    if (reason.length <= 60) {
+      rows.push(["Revert reason", red(reason)]);
+    } else {
+      // Long reasons (decoded custom errors, viem messages) wrap under the label.
+      rows.push(["Revert reason", ""]);
+      for (const line of reason.match(/.{1,72}/g) ?? [reason]) {
+        rows.push(["", red(line)]);
+      }
+    }
   }
 
   if (step.stateDependentWarning) {

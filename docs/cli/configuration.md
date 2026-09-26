@@ -11,6 +11,8 @@ itself.
 | `FOOP_RPC_URL` | `simulate`, `run` | RPC endpoint. Overridden by a workload's `rpc` field if present. |
 | `FOOP_PRIVATE_KEY` | `run` (required), `simulate` (optional) | Hex private key for signing. In `simulate` it's only used to derive the wallet address for balance checks. |
 | `FOOP_WALLET_ADDRESS` | `simulate` | Address to check balances against, without exposing a key. Takes precedence over deriving from `FOOP_PRIVATE_KEY`. |
+| `ETHERSCAN_API_KEY` | all (ABI resolution) | Enables the Etherscan V2 ABI lookup tier. One key covers all supported chains. Optional — Blockscout and Sourcify still work without it. |
+| `FOOP_HOME` | `save`, `list`, `show`, `rm`, `history`, `templates`, `new` | Store location for saved workloads, templates, and run history. Defaults to `~/.foop`. |
 
 ## RPC resolution order
 

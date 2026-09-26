@@ -27,7 +27,7 @@ balance constraints only ever lower it.
 ## Explicit review
 
 Before executing, `foop run` prints the plan and prompts
-`Execute N transaction(s)? [y/N]`. You must type `y`. Automation can bypass the
+`Execute N transaction(s)? [y/n]`. You must type `y`. Automation can bypass the
 prompt with `--yes` / `-y` — an explicit opt-out, not the default.
 
 ## Mainnet gate

@@ -8,7 +8,8 @@ import {
   readAllowance,
 } from "@foop/core";
 import type { WorkloadFile } from "@foop/core";
-import { loadConfig, readWorkloadFile } from "../config.js";
+import { loadConfig } from "../config.js";
+import { resolveWorkloadArg } from "../store.js";
 import { promptWorkloadInputs } from "../inputs.js";
 import {
   printError,
@@ -52,11 +53,11 @@ export async function runSimulate(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 1. Load config + workload file
+  // 1. Load config + workload file (a path or a saved name)
   const config = loadConfig();
   let raw: unknown;
   try {
-    raw = readWorkloadFile(filePath);
+    raw = resolveWorkloadArg(filePath).file;
   } catch (err: unknown) {
     printError(err instanceof Error ? err.message : String(err));
     process.exit(1);

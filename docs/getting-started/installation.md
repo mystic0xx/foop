@@ -3,10 +3,10 @@
 Foop is a TypeScript monorepo managed with [pnpm](https://pnpm.io). It ships two
 packages:
 
-| Package | Description |
-|---|---|
+| Package        | Description                                                               |
+| -------------- | ------------------------------------------------------------------------- |
 | `@foop/core` | Simulation engine, workload planner, execution controller — shared logic |
-| `@foop/cli` | Terminal interface: `foop init`, `foop simulate`, `foop run` |
+| `@foop/cli`  | Terminal interface:`foop init`, `foop simulate`, `foop run`         |
 
 ## Requirements
 

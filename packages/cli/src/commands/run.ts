@@ -11,7 +11,8 @@ import {
   readAllowance,
 } from "@foop/core";
 import type { WorkloadFile, WorkloadStep, TxRecord } from "@foop/core";
-import { loadConfig, readWorkloadFile } from "../config.js";
+import { loadConfig } from "../config.js";
+import { resolveWorkloadArg, appendHistory } from "../store.js";
 import { promptWorkloadInputs } from "../inputs.js";
 import {
   printError,
@@ -71,10 +72,13 @@ export async function runExecute(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 2. Load workload file
-  let raw: unknown;
+  // 2. Load workload file (a path or a saved name)
+  let raw: WorkloadFile;
+  let sourceLabel = filePath;
   try {
-    raw = readWorkloadFile(filePath);
+    const resolved = resolveWorkloadArg(filePath);
+    raw = resolved.file;
+    sourceLabel = resolved.source;
   } catch (err: unknown) {
     printError(err instanceof Error ? err.message : String(err));
     process.exit(1);
@@ -158,7 +162,7 @@ export async function runExecute(args: string[]): Promise<void> {
       if (current < approvalPlan.required) {
         if (!skipConfirm) {
           const ok = await promptConfirm(
-            "  Approve now, then simulate and execute the workload? [y/N] "
+            "  Approve now, then simulate and execute the workload? [y/n] "
           );
           if (!ok) {
             console.log("\n  Aborted.\n");
@@ -257,7 +261,7 @@ export async function runExecute(args: string[]): Promise<void> {
   // 12. Confirmation prompt (skipped when already confirmed at the approval step)
   if (!skipConfirm && !confirmed) {
     const ok = await promptConfirm(
-      `  Execute ${totalExecutable} transaction(s)? [y/N] `
+      `  Execute ${totalExecutable} transaction(s)? [y/n] `
     );
     if (!ok) {
       console.log("\n  Aborted.\n");
@@ -301,6 +305,22 @@ export async function runExecute(args: string[]): Promise<void> {
 
   clearProgressLine();
   printDivider();
+
+  // Record this run in history (best-effort — never aborts on write failure).
+  appendHistory({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ts: new Date().toISOString(),
+    source: sourceLabel,
+    chain: file.chain,
+    wallet: account.address,
+    requested: totalExecutable,
+    confirmed: result.confirmed,
+    failed: result.failed,
+    totalGasUsed: result.totalGasUsed.toString(),
+    txHashes: result.transactions
+      .map((t) => t.hash)
+      .filter((h) => !/^0x0+$/.test(h)),
+  });
 
   // 12. Summary
   printExecutionSummary({

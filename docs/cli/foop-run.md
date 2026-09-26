@@ -9,10 +9,10 @@ foop run <workload.json> [--yes] [--mainnet-i-understand]
 
 ## Arguments & flags
 
-| Argument / flag | Description |
-|---|---|
-| `<workload.json>` | Path to the workload file. Required. |
-| `--yes`, `-y` | Skip the confirmation prompt and execute the plan directly. |
+| Argument / flag            | Description                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `<workload.json>`        | Path to the workload file. Required.                                                 |
+| `--yes`, `-y`          | Skip the confirmation prompt and execute the plan directly.                          |
 | `--mainnet-i-understand` | Required to run against a mainnet chain. Without it, the command refuses to proceed. |
 
 ## Requirements
@@ -29,7 +29,7 @@ foop run <workload.json> [--yes] [--mainnet-i-understand]
 4. Prints warnings, the mainnet/large-workload notices, and the simulation
    table.
 5. Aborts if **0** transactions are executable.
-6. **Prompts** `Execute N transaction(s)? [y/N]` — unless `--yes`.
+6. **Prompts** `Execute N transaction(s)? [y/n]` — unless `--yes`.
 7. **Executes** sequentially, printing a line per settled transaction and a live
    progress bar.
 8. Prints the final **summary**.
@@ -58,18 +58,18 @@ Total gas: 0.0178 ETH
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| `0` | Run completed with no failed transactions. |
+| Code  | Meaning                                                                                                    |
+| ----- | ---------------------------------------------------------------------------------------------------------- |
+| `0` | Run completed with no failed transactions.                                                                 |
 | `1` | A transaction failed, the mainnet gate blocked the run, 0 executable, or a load/validation error occurred. |
 
 {% hint style="danger" %}
 `foop run` broadcasts real transactions. On mainnet this spends real funds. Use
 a dedicated key with test funds and always review the simulation before
-confirming. See [Safety & guardrails](../concepts/safety-and-guardrails.md).
+confirming. See [Safety &amp; guardrails](../concepts/safety-and-guardrails.md).
 {% endhint %}
 
 ## See also
 
 * [Execute (lifecycle)](../lifecycle/execute.md)
-* [Nonce management & execution](../concepts/execution.md)
+* [Nonce management &amp; execution](../concepts/execution.md)

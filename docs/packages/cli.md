@@ -8,12 +8,18 @@ executor, and render results.
 
 | File | Responsibility |
 |---|---|
-| `index.ts` | Entry point and command router (`simulate` / `run` / `init`). |
+| `index.ts` | Entry point and command router (lifecycle + saved workloads + templates). |
 | `config.ts` | Load `FOOP_PRIVATE_KEY` / `FOOP_RPC_URL`; read and parse workload files. |
+| `store.ts` | `~/.foop` store: save/load/list/remove workloads, run history, workload-arg resolution. |
+| `templates.ts` | Bundled starter templates plus user templates. |
+| `inputs.ts` | Interactive prompts for `{amount}` / `{count}` and auto-approve. |
 | `commands/simulate.ts` | `foop simulate` — plan and render, no signing. |
 | `commands/run.ts` | `foop run` — plan, confirm, execute, summarize. |
 | `commands/init.ts` | `foop init` — interactive scaffolder. |
-| `renderer/progress.ts` | Terminal output: headers, tables, progress bar, status lines. |
+| `commands/workloads.ts` | `foop save` / `list` / `show` / `rm`. |
+| `commands/history.ts` | `foop history` — past run records. |
+| `commands/templates.ts` | `foop templates` / `new`. |
+| `renderer/progress.ts` | Terminal output: banner, headers, tables, progress bar, status lines. |
 
 ## Command router
 
@@ -26,6 +32,9 @@ switch (command) {
   case "simulate": /* → commands/simulate */
   case "run":      /* → commands/run */
   case "init":     /* → commands/init */
+  case "save": case "list": case "show": case "rm": /* → commands/workloads */
+  case "history":  /* → commands/history */
+  case "templates": case "new": /* → commands/templates */
   default:         /* usage banner */
 }
 ```

@@ -8,7 +8,8 @@ UI and no key storage — just types, validation, simulation, and execution logi
 | Module | Responsibility |
 |---|---|
 | `types.ts` | Shared types: `WorkloadFile`, `WorkloadStep`, `SimulationResult`, `StepSimulation`, `ExecutionResult`, `TxRecord`. |
-| `abi-resolver.ts` | Resolve an ABI: provided → Blockscout → signature. |
+| `abi-resolver.ts` | Resolve an ABI: provided → Blockscout → Etherscan → Sourcify → signature. |
+| `revert-decoder.ts` | Decode revert data into a readable reason: `Error(string)` / `Panic(uint256)`, custom errors from the step ABI, and openchain.xyz selector lookup. |
 | `simulation-engine.ts` | Read-only simulation of a workload into an executable plan. |
 | `workload-planner.ts` | Validate a workload and run the engine; produce a `WorkloadPlan`. |
 | `nonce-manager.ts` | Fetch and vend sequential nonces. |

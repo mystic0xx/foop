@@ -93,7 +93,7 @@ Full run summary: confirmed, failed, pending counts, total and average gas, and 
 | `@foop/core` | Simulation engine, workload planner, execution controller — shared between CLI and web |
 | `@foop/cli` | Terminal interface: `foop simulate`, `foop run`, `foop init` |
 
-## CLI (in progress)
+## CLI
 
 ```bash
 # Dry-run a workload file — no signing required
@@ -104,9 +104,20 @@ foop run workload.json
 
 # Interactively scaffold a workload file
 foop init
+
+# Save, reuse, and review workloads
+foop save workload.json my-seed     # store it in ~/.foop
+foop list                           # list saved workloads
+foop run my-seed                    # run a saved workload by name
+foop history                        # review past runs
+
+# Start from a bundled template
+foop templates                      # wrap-eth, erc20-approve, uniswap-swap, …
+foop new wrap-eth my-wrap
 ```
 
-Workload files are plain JSON and version-control friendly:
+Anywhere a command takes a workload, you can pass a **file path** or a **saved
+name**. Workload files are plain JSON and version-control friendly:
 
 ```json
 {
@@ -123,6 +134,21 @@ Workload files are plain JSON and version-control friendly:
 }
 ```
 
+### ABI resolution
+
+Foop resolves each contract's ABI in priority order —
+**provided → Blockscout → Etherscan → Sourcify → signature** — so a workload
+runs whether or not the contract is verified on any single explorer. Set
+`ETHERSCAN_API_KEY` to enable the Etherscan tier (one key covers all chains);
+Sourcify needs no key.
+
+### Revert diagnostics
+
+When simulation detects a revert, Foop decodes the real reason from the revert
+data — `Error(string)`, `Panic(uint256)`, custom errors from the step ABI, and
+unknown selectors looked up via openchain.xyz — instead of a generic
+"execution reverted".
+
 ## Security
 
 Foop does not custody private keys. All transactions are normal user-authorized wallet interactions. Simulation always runs before execution. The requested iteration count is a hard upper bound — Foop will never silently run until funds are exhausted.
@@ -130,5 +156,5 @@ Foop does not custody private keys. All transactions are normal user-authorized 
 ## Roadmap
 
 - **V1** — Web UI: define, simulate, execute, observe
-- **V1.5** — Saved workloads, workload history, multi-step workloads, reusable templates
+- **V1.5** — Saved workloads, workload history, reusable templates *(CLI: shipped)*; multi-step workloads with inter-step data passing *(in progress)*
 - **V2** — CLI, CI/CD, workload files, team sharing, agent-callable execution API
