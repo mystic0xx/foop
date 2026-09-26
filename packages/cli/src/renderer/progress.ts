@@ -249,9 +249,7 @@ export function printExecutionSummary(opts: {
   console.log("");
 
   if (failed > 0) {
-    console.log(
-      red(`  ${failed} transaction(s) failed. Run with --verbose to see details.`)
-    );
+    console.log(red(`  ${failed} transaction(s) failed.`));
     console.log("");
   }
 }
@@ -266,8 +264,9 @@ export function printTxLine(opts: {
   hash: string;
   status: "confirmed" | "failed" | "pending";
   gasUsed?: bigint;
+  failureReason?: string;
 }): void {
-  const { index, total, hash, status, gasUsed } = opts;
+  const { index, total, hash, status, gasUsed, failureReason } = opts;
   const pad = String(total).length;
   const num = lpad(String(index), pad);
   const statusStr =
@@ -276,10 +275,19 @@ export function printTxLine(opts: {
       : status === "failed"
       ? red("✗")
       : yellow("…");
+  const isZeroHash = hash.replace("0x", "").replace(/0/g, "") === "";
+  const hashStr = isZeroHash ? red("(not submitted)") : dim(`${hash.slice(0, 20)}…`);
   const gasStr = gasUsed ? dim(`  ${gasUsed.toLocaleString()} gas`) : "";
   console.log(
-    `  [${num}/${total}] ${statusStr}  ${dim(hash.slice(0, 20))}…${gasStr}`
+    `  [${num}/${total}] ${statusStr}  ${hashStr}${gasStr}`
   );
+  if (failureReason) {
+    // Print full reason across multiple lines if needed
+    const lines = failureReason.replace(/\n/g, " ").match(/.{1,100}/g) ?? [];
+    for (const line of lines) {
+      console.log(`         ${red(dim(line))}`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
