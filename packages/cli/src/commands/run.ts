@@ -5,14 +5,21 @@ import {
   executeWorkload,
   WorkloadValidationError,
   isMainnet,
+  hasInputs,
+  applyWorkloadInputs,
+  planApproval,
+  readAllowance,
 } from "@foop/core";
-import type { WorkloadFile, TxRecord } from "@foop/core";
+import type { WorkloadFile, WorkloadStep, TxRecord } from "@foop/core";
 import { loadConfig, readWorkloadFile } from "../config.js";
+import { promptWorkloadInputs } from "../inputs.js";
 import {
   printError,
   printHeader,
   printSimulationResult,
   printWarning,
+  printInfo,
+  printApprovePlan,
   printMainnetWarning,
   printLargeWorkloadWarning,
   printProgress,
@@ -72,7 +79,7 @@ export async function runExecute(args: string[]): Promise<void> {
     printError(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-  const file = raw as WorkloadFile;
+  let file = raw as WorkloadFile;
 
   // 3. Resolve RPC
   const rpcUrl = file.rpc ?? config.rpcUrl;
@@ -89,10 +96,30 @@ export async function runExecute(args: string[]): Promise<void> {
   const publicClient = createPublicClient({ transport });
   const walletClient = createWalletClient({ account, transport });
 
-  // 5. Mainnet gate
+  printHeader(`FOOP RUN  ${chainName(file.chain)}`);
+  console.log(`  Wallet  ${account.address}`);
+  console.log(`  File    ${filePath}\n`);
+
+  // 5. Interactive inputs — prompt + substitute {amount}/{count} before anything else.
+  let inputs: Awaited<ReturnType<typeof promptWorkloadInputs>> | null = null;
+  if (hasInputs(file)) {
+    try {
+      inputs = await promptWorkloadInputs(file, publicClient);
+    } catch (err: unknown) {
+      printError(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    file = applyWorkloadInputs(file, {
+      amountWei: inputs.amountWei,
+      count: inputs.count,
+      recipient: account.address,
+    });
+  }
+
+  // 6. Mainnet gate
   if (isMainnet(file.chain) && !mainnetAck) {
     printMainnetWarning(
-      file.steps.reduce((sum, s) => sum + s.repeat, 0)
+      file.steps.reduce((sum, s) => sum + Number(s.repeat), 0)
     );
     console.log(
       "  Add --mainnet-i-understand to confirm you want to proceed.\n"
@@ -100,10 +127,84 @@ export async function runExecute(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 6. Simulate
-  printHeader(`FOOP RUN  ${chainName(file.chain)}`);
-  console.log(`  Wallet  ${account.address}`);
-  console.log(`  File    ${filePath}\n`);
+  // 7. Auto-approve — ensure the ERC-20 allowance the workload needs exists.
+  //    When short, the approve tx executes FIRST so the subsequent simulation
+  //    reflects real state (no false transferFrom reverts).
+  let confirmed = false;
+  if (inputs) {
+    let approvalPlan;
+    try {
+      approvalPlan = planApproval(file, inputs);
+    } catch (err: unknown) {
+      printError(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+
+    if (approvalPlan) {
+      const current = await readAllowance(
+        publicClient,
+        approvalPlan.token,
+        account.address,
+        approvalPlan.spender
+      );
+      printApprovePlan({
+        token: approvalPlan.token,
+        spender: approvalPlan.spender,
+        required: approvalPlan.required,
+        current,
+        decimals: inputs.decimals,
+      });
+
+      if (current < approvalPlan.required) {
+        if (!skipConfirm) {
+          const ok = await promptConfirm(
+            "  Approve now, then simulate and execute the workload? [y/N] "
+          );
+          if (!ok) {
+            console.log("\n  Aborted.\n");
+            process.exit(0);
+          }
+          confirmed = true; // don't ask again before executing the steps
+        }
+
+        const approveStep: WorkloadStep = {
+          contract: approvalPlan.token,
+          function: "approve(address,uint256)",
+          args: [approvalPlan.spender, approvalPlan.required.toString()],
+          repeat: 1,
+        };
+
+        printHeader("APPROVING");
+        const approveResult = await executeWorkload({
+          client: publicClient,
+          wallet: walletClient,
+          account,
+          steps: [approveStep],
+          executableCounts: [1],
+          chainId: file.chain,
+          onSettle: (record: TxRecord) => {
+            printTxLine({
+              index: 1,
+              total: 1,
+              hash: record.hash,
+              status: record.status,
+              gasUsed: record.gasUsed,
+              failureReason: record.failureReason,
+            });
+          },
+        });
+        if (approveResult.failed > 0 || approveResult.confirmed === 0) {
+          printError("Approval transaction failed. Aborting before execution.");
+          process.exit(1);
+        }
+        console.log("");
+      } else {
+        printInfo("Sufficient allowance already set — skipping approval.");
+      }
+    }
+  }
+
+  // 8. Simulate
 
   let plan;
   try {
@@ -123,12 +224,12 @@ export async function runExecute(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 7. Validation warnings
+  // 9. Validation warnings
   for (const w of plan.validation.warnings) {
     printWarning(w.message);
   }
 
-  // 8. Large workload warning
+  // 10. Large workload warning
   const totalRequested = plan.simulation.steps.reduce(
     (sum, s) => sum + s.requested,
     0
@@ -137,7 +238,7 @@ export async function runExecute(args: string[]): Promise<void> {
     printLargeWorkloadWarning(totalRequested);
   }
 
-  // 9. Render simulation result
+  // 11. Render simulation result
   const stepLabels = file.steps.map(
     (s) => `${s.function}  ×${s.repeat}  ${s.contract.slice(0, 10)}…`
   );
@@ -153,18 +254,18 @@ export async function runExecute(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // 10. Confirmation prompt
-  if (!skipConfirm) {
-    const confirmed = await promptConfirm(
+  // 12. Confirmation prompt (skipped when already confirmed at the approval step)
+  if (!skipConfirm && !confirmed) {
+    const ok = await promptConfirm(
       `  Execute ${totalExecutable} transaction(s)? [y/N] `
     );
-    if (!confirmed) {
+    if (!ok) {
       console.log("\n  Aborted.\n");
       process.exit(0);
     }
   }
 
-  // 11. Execute
+  // 13. Execute
   printHeader("EXECUTING");
 
   const executableCounts = plan.simulation.steps.map((s) => s.executable);

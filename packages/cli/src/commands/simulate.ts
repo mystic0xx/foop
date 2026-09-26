@@ -1,12 +1,21 @@
 import { createPublicClient, http } from "viem";
-import { planWorkload, WorkloadValidationError } from "@foop/core";
+import {
+  planWorkload,
+  WorkloadValidationError,
+  hasInputs,
+  applyWorkloadInputs,
+  planApproval,
+  readAllowance,
+} from "@foop/core";
 import type { WorkloadFile } from "@foop/core";
 import { loadConfig, readWorkloadFile } from "../config.js";
+import { promptWorkloadInputs } from "../inputs.js";
 import {
   printError,
   printHeader,
   printSimulationResult,
   printWarning,
+  printInfo,
   printSuccess,
   printLargeWorkloadWarning,
   printMainnetWarning,
@@ -53,7 +62,7 @@ export async function runSimulate(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const file = raw as WorkloadFile;
+  let file = raw as WorkloadFile;
 
   // 2. Resolve RPC URL
   const rpcUrl = file.rpc ?? config.rpcUrl;
@@ -82,6 +91,48 @@ export async function runSimulate(args: string[]): Promise<void> {
   const client = createPublicClient({
     transport: http(rpcUrl),
   });
+
+  // 4b. Interactive inputs — prompt + substitute so the simulation reflects the
+  //     real amount / count the user intends to run.
+  let inputs: Awaited<ReturnType<typeof promptWorkloadInputs>> | null = null;
+  if (hasInputs(file)) {
+    try {
+      inputs = await promptWorkloadInputs(file, client);
+    } catch (err: unknown) {
+      printError(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    file = applyWorkloadInputs(file, {
+      amountWei: inputs.amountWei,
+      count: inputs.count,
+      recipient: walletAddress,
+    });
+  }
+
+  // 4c. If an approval is configured and the current allowance is short, note
+  //     that `foop run` will approve first. Per-step simulation evaluates the
+  //     swap against *current* state, so it may show a transferFrom revert here.
+  if (inputs) {
+    try {
+      const approvalPlan = planApproval(file, inputs);
+      if (approvalPlan) {
+        const current = await readAllowance(
+          client,
+          approvalPlan.token,
+          walletAddress,
+          approvalPlan.spender
+        );
+        if (current < approvalPlan.required) {
+          printInfo(
+            `foop run will approve ${approvalPlan.token} → ${approvalPlan.spender} before executing. ` +
+              `Steps that pull this token may show as reverting below because the allowance isn't set yet.`
+          );
+        }
+      }
+    } catch {
+      // Approval note is best-effort; ignore resolution errors here.
+    }
+  }
 
   // 5. Run planner (validate + simulate)
   printHeader(`FOOP SIMULATE  ${chainName(file.chain)}`);

@@ -1,0 +1,57 @@
+{
+  "version": "1",
+  "chain": 84532,
+  "input": {
+    "amountToken": "0x0d442EC7BdDB06b531DCA3Dd39ABaFf554170776",
+    "amountPrompt": "Amount per swap (GYND)",
+    "countPrompt": "Number of swaps"
+  },
+  "approve": {
+    "token": "0x0d442EC7BdDB06b531DCA3Dd39ABaFf554170776",
+    "spender": "0xC7dbf300B6aEA3CFE1730f1C692C606b17B514a6",
+    "amount": "total"
+  },
+  "steps": [
+    {
+      "contract": "0xC7dbf300B6aEA3CFE1730f1C692C606b17B514a6",
+      "function": "exactInputSingle((address,address,uint24,address,uint256,uint256,uint256,uint160))",
+      "abi": [
+        {
+          "type": "function",
+          "name": "exactInputSingle",
+          "stateMutability": "payable",
+          "inputs": [
+            {
+              "name": "params",
+              "type": "tuple",
+              "components": [
+                { "name": "tokenIn", "type": "address" },
+                { "name": "tokenOut", "type": "address" },
+                { "name": "fee", "type": "uint24" },
+                { "name": "recipient", "type": "address" },
+                { "name": "deadline", "type": "uint256" },
+                { "name": "amountIn", "type": "uint256" },
+                { "name": "amountOutMinimum", "type": "uint256" },
+                { "name": "sqrtPriceLimitX96", "type": "uint160" }
+              ]
+            }
+          ],
+          "outputs": [{ "name": "amountOut", "type": "uint256" }]
+        }
+      ],
+      "args": [
+        [
+          "0x0d442EC7BdDB06b531DCA3Dd39ABaFf554170776",
+          "0xD385d2Da758027a7a7D9a06139c6c53B2a8c284C",
+          "10000",
+          "{recipient}",
+          "4102444800",
+          "{amount}",
+          "0",
+          "0"
+        ]
+      ],
+      "repeat": "{count}"
+    }
+  ]
+}

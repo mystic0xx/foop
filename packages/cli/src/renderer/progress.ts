@@ -302,6 +302,41 @@ export function printWarning(message: string): void {
   console.warn(`  ${yellow("Warning:")} ${message}`);
 }
 
+export function printInfo(message: string): void {
+  console.log(`  ${cyan("ℹ")} ${message}`);
+}
+
+// ---------------------------------------------------------------------------
+// Approval plan
+// ---------------------------------------------------------------------------
+
+const UINT256_MAX = (1n << 256n) - 1n;
+
+export function printApprovePlan(opts: {
+  token: string;
+  spender: string;
+  required: bigint;
+  current: bigint;
+  decimals: number;
+}): void {
+  const { token, spender, required, current, decimals } = opts;
+  const fmt = (v: bigint): string =>
+    v === UINT256_MAX ? "unlimited (max)" : formatUnits(v, decimals);
+
+  printHeader("APPROVAL");
+  const col = 20;
+  const rows: Array<[string, string]> = [
+    ["Token", token],
+    ["Spender", spender],
+    ["Current allowance", fmt(current)],
+    ["Required", bold(fmt(required))],
+  ];
+  for (const [key, val] of rows) {
+    console.log(`  ${dim(rpad(key, col))} ${val}`);
+  }
+  console.log("");
+}
+
 export function printSuccess(message: string): void {
   console.log(`  ${green("✓")} ${message}`);
 }
