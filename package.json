@@ -5,12 +5,15 @@
   "scripts": {
     "build": "pnpm --filter @foop/core build && pnpm --filter @foop/cli build",
     "dev": "pnpm -r --parallel dev",
+    "foop": "node packages/cli/dist/index.js",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm --filter @foop/core typecheck && pnpm --filter @foop/cli typecheck"
   },
   "devDependencies": {
-    "typescript": "^5.4.5"
+    "@vitest/coverage-v8": "^5.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^5.0.2"
   },
   "engines": {
     "node": ">=20",

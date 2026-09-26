@@ -49,30 +49,30 @@
 - [x] Render simulation result table (requested / gas / value / balance / executable / blocked-by)
 - [x] Exit 0 if all requested are executable; exit 1 if blocked
 
-## 9. `packages/cli` — `foop run`
-- [ ] `src/commands/run.ts`
-- [ ] Run simulate first (always)
-- [ ] Show plan + prompt for confirmation (`--yes` / `-y` to skip)
-- [ ] Hard-exit on mainnet without `--mainnet-i-understand`
-- [ ] `src/core/execution-controller.ts` — sequential tx loop
-- [ ] `src/core/nonce-manager.ts` — fetch pending nonce, increment locally
-- [ ] Send tx, wait for receipt, record result
-- [ ] Retry up to 3× on RPC error with backoff
-- [ ] Render live progress per transaction
-- [ ] Render final summary (confirmed / failed / pending / total gas / avg gas)
+## 9. `packages/cli` — `foop run` ✅
+- [x] `src/commands/run.ts`
+- [x] Run simulate first (always)
+- [x] Show plan + prompt for confirmation (`--yes` / `-y` to skip)
+- [x] Hard-exit on mainnet without `--mainnet-i-understand`
+- [x] `src/core/execution-controller.ts` — sequential tx loop
+- [x] `src/core/nonce-manager.ts` — fetch pending nonce, increment locally
+- [x] Send tx, wait for receipt, record result
+- [x] Retry up to 3× on RPC error with backoff
+- [x] Render live progress per transaction
+- [x] Render final summary (confirmed / failed / pending / total gas / avg gas)
 
-## 10. `packages/cli` — `foop init`
-- [ ] `src/commands/init.ts`
-- [ ] Interactive prompts: chain ID, contract address, ABI fetch, function select, args, value, repeat
-- [ ] Write `workload.json` to disk
-- [ ] Print next-step hint: `foop simulate workload.json`
+## 10. `packages/cli` — `foop init` ✅
+- [x] `src/commands/init.ts`
+- [x] Interactive prompts: chain ID, contract address, ABI fetch, function select, args, value, repeat
+- [x] Write `workload.json` to disk
+- [x] Print next-step hint: `foop simulate workload.json`
 
-## 11. Validation & guardrails
-- [ ] Reject workload with 0 steps
-- [ ] Reject `repeat` < 1 or > 10,000 (soft upper bound with warning > 500)
-- [ ] Mainnet chain ID detection → require `--mainnet-i-understand`
-- [ ] Large workload warning (> 500 txs) even on testnet
-- [ ] Never run to fund exhaustion — hard executable bound
+## 11. Validation & guardrails ✅
+- [x] Reject workload with 0 steps — `workload-planner.ts` `validateWorkload`
+- [x] Reject `repeat` < 1 or > 10,000 (soft upper bound with warning > 500) — `workload-planner.ts`
+- [x] Mainnet chain ID detection → require `--mainnet-i-understand` — `run.ts`
+- [x] Large workload warning (> 500 txs) even on testnet — `simulate.ts` + `run.ts`
+- [x] Never run to fund exhaustion — hard executable bound — `simulation-engine.ts` + `execution-controller.ts`
 
 ## 12. Testing
 - [ ] Unit tests for simulation engine (mock viem client)
