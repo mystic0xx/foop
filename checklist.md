@@ -10,44 +10,44 @@
 ## 2. `packages/core` — shared types ✅
 - [x] `src/types.ts` — `WorkloadFile`, `WorkloadStep`, `SimulationResult`, `StepSimulation`, `ExecutionResult`, `TxRecord`
 
-## 3. `packages/core` — ABI resolver
-- [ ] `src/abi-resolver.ts` — fetch verified ABI from Blockscout by chain ID + address
-- [ ] Fallback: accept raw ABI array in workload file (`abi` field)
-- [ ] Fallback: parse human-readable function signature
+## 3. `packages/core` — ABI resolver ✅
+- [x] `src/abi-resolver.ts` — fetch verified ABI from Blockscout by chain ID + address
+- [x] Fallback: accept raw ABI array in workload file (`abi` field)
+- [x] Fallback: parse human-readable function signature
 
-## 4. `packages/core` — simulation engine
-- [ ] `src/simulation-engine.ts`
-- [ ] `eth_call` on first iteration — revert detection + decode reason
-- [ ] `eth_estimateGas` — single estimate with 1.2× safety buffer
-- [ ] Native balance fetch (`eth_getBalance`)
-- [ ] ERC-20 balance fetch (`balanceOf`) when step transfers tokens
-- [ ] Allowance check when step calls `transferFrom`
-- [ ] Fee data fetch (`eth_feeHistory` / `eth_maxFeePerGas`)
-- [ ] Compute `maxByGas`, `maxByValue`, `maxByToken`
-- [ ] Compute `executable = min(requested, maxByGas, maxByValue, maxByToken)`
-- [ ] Flag state-dependent workloads (warn estimate may drift)
-- [ ] All math in BigInt — no JS floats
+## 4. `packages/core` — simulation engine ✅
+- [x] `src/simulation-engine.ts`
+- [x] `eth_call` on first iteration — revert detection + decode reason
+- [x] `eth_estimateGas` — single estimate with 1.2× safety buffer
+- [x] Native balance fetch (`eth_getBalance`)
+- [x] ERC-20 balance fetch (`balanceOf`) when step transfers tokens
+- [x] Allowance check when step calls `transferFrom`
+- [x] Fee data fetch (`eth_feeHistory` / `eth_maxFeePerGas`)
+- [x] Compute `maxByGas`, `maxByValue`, `maxByToken`
+- [x] Compute `executable = min(requested, maxByGas, maxByValue, maxByToken)`
+- [x] Flag state-dependent workloads (warn estimate may drift)
+- [x] All math in BigInt — no JS floats
 
-## 5. `packages/core` — workload planner
-- [ ] `src/workload-planner.ts`
-- [ ] Accept `WorkloadFile`, run simulation per step
-- [ ] Produce overall `SimulationResult` with per-step breakdown
-- [ ] Validate inputs: address format, chain ID present, repeat > 0, steps non-empty
+## 5. `packages/core` — workload planner ✅
+- [x] `src/workload-planner.ts`
+- [x] Accept `WorkloadFile`, run simulation per step
+- [x] Produce overall `SimulationResult` with per-step breakdown
+- [x] Validate inputs: address format, chain ID present, repeat > 0, steps non-empty
 
-## 6. `packages/cli` — scaffold
-- [ ] `src/index.ts` — entry point, command router (`simulate` / `run` / `init`)
-- [ ] `tsup.config.ts` — bundle to single `dist/index.js`, shebang
-- [ ] `config.ts` — load `FOOP_PRIVATE_KEY`, `FOOP_RPC_URL` from env
+## 6. `packages/cli` — scaffold ✅
+- [x] `src/index.ts` — entry point, command router (`simulate` / `run` / `init`)
+- [x] `tsup.config.ts` — bundle to single `dist/index.js`, shebang
+- [x] `config.ts` — load `FOOP_PRIVATE_KEY`, `FOOP_RPC_URL` from env
 
-## 7. `packages/cli` — renderer
-- [ ] `src/renderer/progress.ts` — terminal output helpers (tables, progress bar, status lines)
+## 7. `packages/cli` — renderer ✅
+- [x] `src/renderer/progress.ts` — terminal output helpers (tables, progress bar, status lines)
 
-## 8. `packages/cli` — `foop simulate`
-- [ ] `src/commands/simulate.ts`
-- [ ] Load + validate workload JSON file
-- [ ] Run workload planner
-- [ ] Render simulation result table (requested / gas / value / balance / executable / blocked-by)
-- [ ] Exit 0 if all requested are executable; exit 1 if blocked
+## 8. `packages/cli` — `foop simulate` ✅
+- [x] `src/commands/simulate.ts`
+- [x] Load + validate workload JSON file
+- [x] Run workload planner
+- [x] Render simulation result table (requested / gas / value / balance / executable / blocked-by)
+- [x] Exit 0 if all requested are executable; exit 1 if blocked
 
 ## 9. `packages/cli` — `foop run`
 - [ ] `src/commands/run.ts`

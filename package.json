@@ -3,11 +3,11 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm --filter @foop/core build && pnpm --filter @foop/cli build",
     "dev": "pnpm -r --parallel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm --filter @foop/core typecheck && pnpm --filter @foop/cli typecheck"
   },
   "devDependencies": {
     "typescript": "^5.4.5"
