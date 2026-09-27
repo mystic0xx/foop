@@ -4,12 +4,15 @@ import { resolve } from "node:path";
 export interface CliConfig {
   privateKey: `0x${string}` | undefined;
   rpcUrl: string | undefined;
+  /** Model id for `foop ai`. Overridable via FOOP_AI_MODEL. */
+  aiModel: string;
 }
 
 export function loadConfig(): CliConfig {
   return {
     privateKey: process.env.FOOP_PRIVATE_KEY as `0x${string}` | undefined,
     rpcUrl: process.env.FOOP_RPC_URL,
+    aiModel: process.env.FOOP_AI_MODEL || "claude-sonnet-5",
   };
 }
 

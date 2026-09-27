@@ -20,6 +20,11 @@ async function main(): Promise<void> {
       await runInit(args);
       break;
     }
+    case "ai": {
+      const { runAi } = await import("./commands/ai.js");
+      await runAi(args);
+      break;
+    }
     case "save": {
       const { runSave } = await import("./commands/workloads.js");
       await runSave(args);
@@ -56,6 +61,13 @@ async function main(): Promise<void> {
       break;
     }
     default: {
+      // No command → interactive launcher. `help`/unknown → usage text.
+      if (!command) {
+        const { runMenu } = await import("./commands/menu.js");
+        await runMenu();
+        break;
+      }
+      const isHelp = command === "help" || command === "-h" || command === "--help";
       const { printFoopBanner } = await import("./renderer/progress.js");
       printFoopBanner();
       console.log(
@@ -63,6 +75,8 @@ async function main(): Promise<void> {
           "  foop — on-chain workload runner",
           "",
           "  Usage:",
+          "    foop                             Interactive launcher (AI / provide / scaffold)",
+          "    foop ai [prompt]                 Build a workload from plain English",
           "    foop simulate <workload|name>    Dry-run a workload (no signing)",
           "    foop run <workload|name>         Simulate then execute",
           "    foop init                        Scaffold a workload file",
@@ -82,10 +96,12 @@ async function main(): Promise<void> {
           "    FOOP_PRIVATE_KEY   Private key for signing (run only)",
           "    FOOP_RPC_URL       RPC endpoint override",
           "    FOOP_HOME          Store location (default ~/.foop)",
+          "    ANTHROPIC_API_KEY  API key for `foop ai`",
+          "    FOOP_AI_MODEL      Model for `foop ai` (default claude-sonnet-5)",
           "",
         ].join("\n")
       );
-      exit(command ? 1 : 0);
+      exit(isHelp ? 0 : 1);
     }
   }
 }
