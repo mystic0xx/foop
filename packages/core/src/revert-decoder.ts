@@ -35,25 +35,30 @@ const PANIC_REASONS: Record<number, string> = {
 export function extractRevertData(err: unknown): Hex | undefined {
   const seen = new Set<unknown>();
   let cur: unknown = err;
+  let sawEmpty = false;
   while (cur && typeof cur === "object" && !seen.has(cur)) {
     seen.add(cur);
     const rec = cur as Record<string, unknown>;
     const candidates = [rec.data, rec.raw];
     for (const cand of candidates) {
-      if (typeof cand === "string" && cand.startsWith("0x") && cand.length >= 10) {
-        return cand as Hex;
+      if (typeof cand === "string" && cand.startsWith("0x")) {
+        if (cand.length >= 10) return cand as Hex;
+        if (cand === "0x") sawEmpty = true;
       }
       // Some viem errors nest as { data: { data: "0x.." } }
       if (cand && typeof cand === "object") {
         const inner = (cand as Record<string, unknown>).data;
-        if (typeof inner === "string" && inner.startsWith("0x") && inner.length >= 10) {
-          return inner as Hex;
+        if (typeof inner === "string" && inner.startsWith("0x")) {
+          if (inner.length >= 10) return inner as Hex;
+          if (inner === "0x") sawEmpty = true;
         }
       }
     }
     cur = rec.cause;
   }
-  return undefined;
+  // Real error data wins; otherwise report an explicit empty ("0x") revert so
+  // the caller can distinguish a data-less revert from no revert data at all.
+  return sawEmpty ? ("0x" as Hex) : undefined;
 }
 
 /** Decodes the well-known Error(string) / Panic(uint256) selectors. Sync. */
@@ -178,10 +183,29 @@ export async function decodeRevertReason(
   const data = extractRevertData(err);
 
   if (!data || data === "0x") {
-    // No revert data: bare require / out-of-gas / non-revert failure.
-    return data === "0x"
-      ? "reverted without a reason (failed require or out of gas)"
-      : cleanMessage(err);
+    if (data === "0x") {
+      // The revert carried no return data — a bare require()/revert with no
+      // message. The most common causes are worth naming outright.
+      return (
+        "reverted with no reason data — a failed require()/revert with no " +
+        "message (e.g. insufficient token allowance or balance) or out of gas"
+      );
+    }
+    // No revert data anywhere in the error. If the node reported a bare
+    // "execution reverted" with nothing to decode, viem surfaces an opaque
+    // "unknown reason" — replace that with something actionable, but keep any
+    // real reason the node did put in the message.
+    const msg = cleanMessage(err);
+    if (/reverted for an unknown reason|execution reverted\.?$/i.test(msg)) {
+      return (
+        "execution reverted, but the RPC returned no revert data to decode — " +
+        "commonly a failed require() (insufficient token allowance or balance) " +
+        "or an unmet precondition from an earlier step (e.g. supply before " +
+        "approve, borrow before collateral). A node that returns revert data " +
+        "will give the exact reason."
+      );
+    }
+    return msg;
   }
 
   const standard = decodeStandard(data);
