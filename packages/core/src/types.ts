@@ -151,4 +151,12 @@ export interface ExecutionResult {
   totalGasUsed: bigint;
   /** Individual transaction records. */
   transactions: TxRecord[];
+  /**
+   * Iterations that were not run (staged execution only): the funds-capped
+   * remainder of a partial step plus every iteration of steps skipped after a
+   * halt. Undefined for the up-front executor.
+   */
+  skipped?: number;
+  /** Why staged execution halted before finishing, if it did. */
+  haltReason?: string;
 }
