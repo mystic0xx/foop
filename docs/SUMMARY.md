@@ -19,6 +19,7 @@
 ## CLI Reference
 
 * [Overview](cli/overview.md)
+* [foop ai](cli/foop-ai.md)
 * [foop init](cli/foop-init.md)
 * [foop simulate](cli/foop-simulate.md)
 * [foop run](cli/foop-run.md)

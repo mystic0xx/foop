@@ -7,6 +7,8 @@ templates.
 foop — on-chain workload runner
 
 Usage:
+  foop                             Interactive launcher (AI / provide / scaffold)
+  foop ai [prompt]                 Build a workload from plain English
   foop simulate <workload|name>    Dry-run a workload (no signing)
   foop run <workload|name>         Simulate then execute
   foop init                        Scaffold a workload file
@@ -27,7 +29,23 @@ Environment:
   FOOP_RPC_URL       RPC endpoint override
   ETHERSCAN_API_KEY  Enables the Etherscan ABI lookup tier
   FOOP_HOME          Store location (default ~/.foop)
+  ANTHROPIC_API_KEY  API key for `foop ai`
+  FOOP_AI_MODEL      Model for `foop ai` (default claude-sonnet-5)
 ```
+
+## Launcher
+
+Running `foop` with no command opens an interactive launcher with three ways to
+start a workload:
+
+| Choice | Goes to |
+|---|---|
+| **Use foop AI** | [`foop ai`](foop-ai.md) — describe it in plain English. |
+| **Provide a workload** | Bring your own populated JSON, then simulate or run it. |
+| **Scaffold a workload** | [`foop init`](foop-init.md) — the guided step-by-step builder. |
+
+The launcher needs an interactive terminal; in a non-TTY context (piped or CI) it
+prints a hint pointing at the commands instead.
 
 ## Commands
 
@@ -35,6 +53,7 @@ Environment:
 
 | Command | Purpose | Signs? |
 |---|---|---|
+| [`foop ai`](foop-ai.md) | Build a workload from plain English, then simulate and (on approval) run it. | Optional |
 | [`foop init`](foop-init.md) | Interactively scaffold a `workload.json` file. | No |
 | [`foop simulate`](foop-simulate.md) | Validate and simulate a workload; report the executable count. | No |
 | [`foop run`](foop-run.md) | Simulate, prompt for approval, then execute and report. | Yes |

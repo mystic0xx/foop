@@ -91,11 +91,17 @@ Full run summary: confirmed, failed, pending counts, total and average gas, and 
 | Package | Description |
 |---|---|
 | `@foop/core` | Simulation engine, workload planner, execution controller — shared between CLI and web |
-| `@foop/cli` | Terminal interface: `foop simulate`, `foop run`, `foop init` |
+| `@foop/cli` | Terminal interface: `foop ai`, `foop simulate`, `foop run`, `foop init` |
 
 ## CLI
 
 ```bash
+# Describe a workload in plain English — Claude builds, simulates, and explains it
+foop ai "deposit 0.01 ETH 10 times into 0x4200…0006 on Base Sepolia"
+
+# Run with no command for an interactive launcher (AI / provide your own / scaffold)
+foop
+
 # Dry-run a workload file — no signing required
 foop simulate workload.json
 
@@ -133,6 +139,22 @@ name**. Workload files are plain JSON and version-control friendly:
   ]
 }
 ```
+
+### foop ai
+
+Don't want to hand-write JSON? Describe the workload in plain English and Claude
+builds it — resolving the contract's real function from its ABI, asking for
+anything it can't infer (it never invents addresses or amounts), then simulating
+and explaining, in plain English, exactly what you're about to sign before
+executing through the same guarded `foop run` pipeline.
+
+```bash
+foop ai "wrap 0.01 ETH 10 times on Base Sepolia"
+```
+
+Set `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL` for an
+Anthropic-compatible provider). `FOOP_AI_MODEL` selects the model (default
+`claude-sonnet-5`).
 
 ### ABI resolution
 
