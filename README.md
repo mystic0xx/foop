@@ -96,7 +96,7 @@ Full run summary: confirmed, failed, pending counts, total and average gas, and 
 ## CLI
 
 ```bash
-# Describe a workload in plain English — Claude builds, simulates, and explains it
+# Describe a workload in plain English — foop ai builds, simulates, and explains it
 foop ai "deposit 0.01 ETH 10 times into 0x4200…0006 on Base Sepolia"
 
 # Run with no command for an interactive launcher (AI / provide your own / scaffold)
@@ -194,9 +194,3 @@ unknown selectors looked up via openchain.xyz — instead of a generic
 ## Security
 
 Foop does not custody private keys. All transactions are normal user-authorized wallet interactions. Simulation always runs before execution. The requested iteration count is a hard upper bound — Foop will never silently run until funds are exhausted.
-
-## Roadmap
-
-- **V1** — Web UI: define, simulate, execute, observe
-- **V1.5** — Saved workloads, workload history, reusable templates *(CLI: shipped)*; multi-step dependent workloads via staged live re-simulation *(CLI: shipped)*; inter-step data passing *(in progress)*
-- **V2** — CLI, CI/CD, workload files, team sharing, agent-callable execution API
