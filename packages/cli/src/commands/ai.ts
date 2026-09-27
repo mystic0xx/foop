@@ -17,6 +17,7 @@ import {
   printError,
   printInfo,
   printWarning,
+  printStagingNotice,
 } from "../renderer/progress.js";
 
 export async function runAi(args: string[]): Promise<void> {
@@ -134,10 +135,15 @@ export async function runAi(args: string[]): Promise<void> {
     process.exit(1);
   }
 
+  // Staged execution is the default for multi-step workloads (see run.ts). The
+  // guarded run pipeline re-detects this, so we don't pass a flag through — but
+  // the preview, the confirm total, and the notice here must match.
+  const staged = file.steps.length > 1;
+
   const stepLabels = file.steps.map(
     (s) => `${s.function}  ×${s.repeat}  ${s.contract.slice(0, 10)}…`
   );
-  printSimulationResult(plan.simulation, stepLabels);
+  printSimulationResult(plan.simulation, stepLabels, staged);
 
   // Plain-English explanation of what will be signed (best-effort).
   try {
@@ -147,6 +153,7 @@ export async function runAi(args: string[]): Promise<void> {
       file,
       simulation: plan.simulation,
       model: config.aiModel,
+      staged,
     });
     explainSpin.stop("");
     if (explanation) {
@@ -158,18 +165,35 @@ export async function runAi(args: string[]): Promise<void> {
     // Non-fatal: the structured simulation above is authoritative.
   }
 
+  const totalRequested = file.steps.reduce(
+    (sum, s) => sum + Number(s.repeat),
+    0
+  );
   const totalExecutable = plan.simulation.steps.reduce(
     (sum, s) => sum + s.executable,
     0
   );
-  if (totalExecutable === 0) {
+
+  if (staged) {
+    // Later steps may show 0 executable because their preconditions don't exist
+    // yet — that's expected and re-checked live. Abort only if step 0 can't run.
+    if ((plan.simulation.steps[0]?.executable ?? 0) === 0) {
+      printError(
+        "The first step is not executable right now. Aborting — nothing was signed."
+      );
+      process.exit(1);
+    }
+  } else if (totalExecutable === 0) {
     printError("Nothing is executable right now. Aborting — nothing was signed.");
     process.exit(1);
   }
 
   // 5. Offer to execute through the guarded run pipeline.
+  if (staged) printStagingNotice();
   const doRun = await p.confirm({
-    message: `Execute ${totalExecutable} transaction(s) now?`,
+    message: staged
+      ? `Execute up to ${totalRequested} transaction(s) across ${file.steps.length} steps now? Each step is re-checked live and signed only if ready.`
+      : `Execute ${totalExecutable} transaction(s) now?`,
     initialValue: false,
   });
   if (p.isCancel(doRun) || !doRun) {

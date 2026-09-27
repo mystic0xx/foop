@@ -102,7 +102,8 @@ export function printDivider(): void {
 
 export function printSimulationResult(
   sim: SimulationResult,
-  stepLabels: string[]
+  stepLabels: string[],
+  staged = false
 ): void {
   printHeader("SIMULATION RESULT");
 
@@ -114,18 +115,33 @@ export function printSimulationResult(
       console.log(`  ${cyan(bold(`Step ${i + 1}`))} ${dim(label)}`);
     }
 
-    printStepSimulation(step);
+    printStepSimulation(step, staged);
 
     if (i < sim.steps.length - 1) {
       console.log("");
     }
   }
 
+  if (staged && sim.steps.length > 1) {
+    console.log(
+      `  ${dim("Staged: each step is re-checked against live chain state and signed")}`
+    );
+    console.log(
+      `  ${dim("only when its preconditions hold. Deferred steps run after earlier ones land.")}`
+    );
+  }
+
   console.log("");
 }
 
-function printStepSimulation(step: StepSimulation): void {
+function printStepSimulation(step: StepSimulation, staged = false): void {
   const col = 22;
+
+  // In a staged run, a step that reverts today is expected when it depends on
+  // an earlier step (e.g. borrow needs the collateral supply first) — show it
+  // as deferred rather than a hard block.
+  const deferred =
+    staged && step.executable === 0 && step.blockedBy === "revert";
 
   const rows: Array<[string, string]> = [
     ["Requested", String(step.requested)],
@@ -149,34 +165,39 @@ function printStepSimulation(step: StepSimulation): void {
   rows.push(["", ""]); // spacer
 
   const executableStr = String(step.executable);
-  const execColor =
-    step.executable >= step.requested
-      ? green
-      : step.executable === 0
-      ? red
-      : yellow;
+  const execColor = deferred
+    ? yellow
+    : step.executable >= step.requested
+    ? green
+    : step.executable === 0
+    ? red
+    : yellow;
 
   rows.push(["Executable", execColor(bold(executableStr))]);
 
-  if (step.blockedBy !== "none") {
-    const reasons: Record<string, string> = {
-      eth_balance: "Insufficient ETH",
-      token_balance: "Insufficient token balance",
-      allowance: "Insufficient allowance",
-      revert: "Transaction reverts",
-    };
-    rows.push(["Blocked by", red(reasons[step.blockedBy] ?? step.blockedBy)]);
-  }
+  if (deferred) {
+    rows.push(["Status", yellow("Deferred — re-checked live at execution")]);
+  } else {
+    if (step.blockedBy !== "none") {
+      const reasons: Record<string, string> = {
+        eth_balance: "Insufficient ETH",
+        token_balance: "Insufficient token balance",
+        allowance: "Insufficient allowance",
+        revert: "Transaction reverts",
+      };
+      rows.push(["Blocked by", red(reasons[step.blockedBy] ?? step.blockedBy)]);
+    }
 
-  if (step.revertReason) {
-    const reason = step.revertReason;
-    if (reason.length <= 60) {
-      rows.push(["Revert reason", red(reason)]);
-    } else {
-      // Long reasons (decoded custom errors, viem messages) wrap under the label.
-      rows.push(["Revert reason", ""]);
-      for (const line of reason.match(/.{1,72}/g) ?? [reason]) {
-        rows.push(["", red(line)]);
+    if (step.revertReason) {
+      const reason = step.revertReason;
+      if (reason.length <= 60) {
+        rows.push(["Revert reason", red(reason)]);
+      } else {
+        // Long reasons (decoded custom errors, viem messages) wrap under the label.
+        rows.push(["Revert reason", ""]);
+        for (const line of reason.match(/.{1,72}/g) ?? [reason]) {
+          rows.push(["", red(line)]);
+        }
       }
     }
   }
@@ -224,6 +245,71 @@ export function printLargeWorkloadWarning(total: number): void {
     `  ${bold(String(total))} transactions requested. This may consume significant gas.`
   );
   console.log("");
+}
+
+// ---------------------------------------------------------------------------
+// Staged step header (printed by the executor's onStep callback)
+// ---------------------------------------------------------------------------
+
+/**
+ * The honest tradeoff of staged execution, shown before the single up-front
+ * confirmation gates the whole run: earlier steps are signed for real before
+ * later steps can be verified against the state they create.
+ */
+export function printStagingNotice(): void {
+  console.log("");
+  console.log(`  ${yellow("Staged execution")} ${dim("(multi-step workload)")}`);
+  console.log(
+    `  ${dim("Steps run in order. Each is re-simulated against live chain state and")}`
+  );
+  console.log(
+    `  ${dim("signed only if its preconditions hold — so a dependent step (e.g. borrow")}`
+  );
+  console.log(
+    `  ${dim("after supply) is checked only once earlier steps have landed. This means")}`
+  );
+  console.log(
+    `  ${dim("earlier steps are signed for real before later ones can be verified.")}`
+  );
+  console.log("");
+}
+
+export function printStagedStep(opts: {
+  stepIndex: number;
+  totalSteps: number;
+  label: string;
+  requested: number;
+  executable: number;
+  halted: boolean;
+  blockedBy: string;
+  revertReason?: string;
+}): void {
+  const { stepIndex, totalSteps, label, requested, executable, halted } = opts;
+  const head = cyan(bold(`  Step ${stepIndex + 1}/${totalSteps}`));
+  const name = dim(label);
+
+  if (halted) {
+    const reasons: Record<string, string> = {
+      eth_balance: "insufficient ETH",
+      token_balance: "insufficient token balance",
+      allowance: "insufficient allowance",
+      revert: "reverts against live state",
+    };
+    const why = opts.revertReason ?? reasons[opts.blockedBy] ?? opts.blockedBy;
+    console.log(`${head} ${name}`);
+    console.log(`  ${red(`✗ halted — ${why}`)}`);
+    console.log(
+      `  ${dim("Remaining dependent step(s) skipped; earlier steps already ran.")}`
+    );
+    console.log("");
+    return;
+  }
+
+  const count =
+    executable < requested
+      ? yellow(`×${executable} of ${requested} (funds-capped)`)
+      : green(`×${executable}`);
+  console.log(`${head} ${name}  ${count}`);
 }
 
 // ---------------------------------------------------------------------------

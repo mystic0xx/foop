@@ -3,6 +3,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   planWorkload,
   executeWorkload,
+  executeWorkloadStaged,
   WorkloadValidationError,
   isMainnet,
   hasInputs,
@@ -28,6 +29,8 @@ import {
   printTxLine,
   printExecutionSummary,
   printDivider,
+  printStagedStep,
+  printStagingNotice,
 } from "../renderer/progress.js";
 
 // ---------------------------------------------------------------------------
@@ -57,9 +60,12 @@ export async function runExecute(args: string[]): Promise<void> {
   const filePath = args[0];
   const skipConfirm = args.includes("--yes") || args.includes("-y");
   const mainnetAck = args.includes("--mainnet-i-understand");
+  const noStaged = args.includes("--no-staged");
 
   if (!filePath) {
-    printError("Usage: foop run <workload.json> [--yes] [--mainnet-i-understand]");
+    printError(
+      "Usage: foop run <workload.json> [--yes] [--no-staged] [--mainnet-i-understand]"
+    );
     process.exit(1);
   }
 
@@ -243,26 +249,48 @@ export async function runExecute(args: string[]): Promise<void> {
   }
 
   // 11. Render simulation result
+  //
+  // Staged execution is the default for any workload with more than one step:
+  // each step is re-simulated against live chain state right before it runs, so
+  // a dependent step (borrow after supply) is only checked once its
+  // preconditions exist. Single-step workloads keep the up-front path.
+  const staged = file.steps.length > 1 && !noStaged;
+
   const stepLabels = file.steps.map(
     (s) => `${s.function}  ×${s.repeat}  ${s.contract.slice(0, 10)}…`
   );
-  printSimulationResult(plan.simulation, stepLabels);
+  printSimulationResult(plan.simulation, stepLabels, staged);
 
   const totalExecutable = plan.simulation.steps.reduce(
     (sum, s) => sum + s.executable,
     0
   );
 
-  if (totalExecutable === 0) {
+  if (staged) {
+    // Only the first step is simulated against real current state; later steps
+    // may show 0 because their preconditions don't exist yet (that's expected
+    // and re-checked live). Abort only when step 0 itself can't start.
+    if ((plan.simulation.steps[0]?.executable ?? 0) === 0) {
+      printError("The first step is not executable against current state. Aborting.");
+      process.exit(1);
+    }
+  } else if (totalExecutable === 0) {
     printError("No transactions are executable. Aborting.");
     process.exit(1);
   }
 
   // 12. Confirmation prompt (skipped when already confirmed at the approval step)
   if (!skipConfirm && !confirmed) {
-    const ok = await promptConfirm(
-      `  Execute ${totalExecutable} transaction(s)? [y/n] `
-    );
+    let ok: boolean;
+    if (staged) {
+      printStagingNotice();
+      ok = await promptConfirm(
+        `  Execute up to ${totalRequested} transaction(s) across ${file.steps.length} steps? ` +
+          `Each step is re-checked live and signed only if ready. [y/n] `
+      );
+    } else {
+      ok = await promptConfirm(`  Execute ${totalExecutable} transaction(s)? [y/n] `);
+    }
     if (!ok) {
       console.log("\n  Aborted.\n");
       process.exit(0);
@@ -272,39 +300,90 @@ export async function runExecute(args: string[]): Promise<void> {
   // 13. Execute
   printHeader("EXECUTING");
 
-  const executableCounts = plan.simulation.steps.map((s) => s.executable);
+  // Denominator for the progress bar: the up-front executor knows exactly how
+  // many will run; the staged executor can only bound it by the requested total.
+  const progressTotal = staged ? totalRequested : totalExecutable;
   let doneCount = 0;
 
-  printProgress(0, totalExecutable);
+  let result;
+  if (staged) {
+    result = await executeWorkloadStaged({
+      client: publicClient,
+      wallet: walletClient,
+      account,
+      steps: file.steps,
+      chainId: file.chain,
+      onStep: (info) => {
+        clearProgressLine();
+        printStagedStep({
+          stepIndex: info.stepIndex,
+          totalSteps: file.steps.length,
+          label: stepLabels[info.stepIndex] ?? `Step ${info.stepIndex + 1}`,
+          requested: info.requested,
+          executable: info.executable,
+          halted: info.halted,
+          blockedBy: info.blockedBy,
+          revertReason: info.revertReason,
+        });
+        if (!info.halted) printProgress(doneCount, progressTotal);
+      },
+      onSubmit: ({ hash }) => {
+        void hash;
+      },
+      onSettle: (record: TxRecord) => {
+        doneCount++;
+        clearProgressLine();
+        printTxLine({
+          index: doneCount,
+          total: progressTotal,
+          hash: record.hash,
+          status: record.status,
+          gasUsed: record.gasUsed,
+          failureReason: record.failureReason,
+        });
+        printProgress(doneCount, progressTotal, record.hash);
+      },
+    });
+  } else {
+    const executableCounts = plan.simulation.steps.map((s) => s.executable);
+    printProgress(0, progressTotal);
 
-  const result = await executeWorkload({
-    client: publicClient,
-    wallet: walletClient,
-    account,
-    steps: file.steps,
-    executableCounts,
-    chainId: file.chain,
-    onSubmit: ({ hash }) => {
-      // hash known, receipt pending — progress bar stays until settled
-      void hash;
-    },
-    onSettle: (record: TxRecord) => {
-      doneCount++;
-      clearProgressLine();
-      printTxLine({
-        index: doneCount,
-        total: totalExecutable,
-        hash: record.hash,
-        status: record.status,
-        gasUsed: record.gasUsed,
-        failureReason: record.failureReason,
-      });
-      printProgress(doneCount, totalExecutable, record.hash);
-    },
-  });
+    result = await executeWorkload({
+      client: publicClient,
+      wallet: walletClient,
+      account,
+      steps: file.steps,
+      executableCounts,
+      chainId: file.chain,
+      onSubmit: ({ hash }) => {
+        // hash known, receipt pending — progress bar stays until settled
+        void hash;
+      },
+      onSettle: (record: TxRecord) => {
+        doneCount++;
+        clearProgressLine();
+        printTxLine({
+          index: doneCount,
+          total: progressTotal,
+          hash: record.hash,
+          status: record.status,
+          gasUsed: record.gasUsed,
+          failureReason: record.failureReason,
+        });
+        printProgress(doneCount, progressTotal, record.hash);
+      },
+    });
+  }
 
   clearProgressLine();
   printDivider();
+
+  if (result.haltReason) {
+    printWarning(result.haltReason);
+  }
+  if (result.skipped && result.skipped > 0) {
+    printInfo(`${result.skipped} iteration(s) not run (skipped or funds-capped).`);
+  }
 
   // Record this run in history (best-effort — never aborts on write failure).
   appendHistory({
@@ -313,7 +392,7 @@ export async function runExecute(args: string[]): Promise<void> {
     source: sourceLabel,
     chain: file.chain,
     wallet: account.address,
-    requested: totalExecutable,
+    requested: progressTotal,
     confirmed: result.confirmed,
     failed: result.failed,
     totalGasUsed: result.totalGasUsed.toString(),
@@ -322,13 +401,13 @@ export async function runExecute(args: string[]): Promise<void> {
       .filter((h) => !/^0x0+$/.test(h)),
   });
 
-  // 12. Summary
+  // 14. Summary
   printExecutionSummary({
     confirmed: result.confirmed,
     failed: result.failed,
     pending: result.pending,
     totalGasUsed: result.totalGasUsed,
-    total: totalExecutable,
+    total: progressTotal,
   });
 
   process.exit(result.failed > 0 ? 1 : 0);

@@ -164,6 +164,26 @@ runs whether or not the contract is verified on any single explorer. Set
 `ETHERSCAN_API_KEY` to enable the Etherscan tier (one key covers all chains);
 Sourcify needs no key.
 
+### Multi-step & staged execution
+
+A workload can chain several steps, and any workload with more than one step
+runs **staged** by default: before each step Foop re-simulates it against live
+chain state, so a step that depends on an earlier one is only checked once its
+preconditions actually exist. A supply-then-borrow flow, for example, runs in a
+single pass — the borrow is simulated *after* the collateral it needs is
+on-chain, not before (the single-shot planner would see it revert and skip it).
+
+- Steps run in order; each waits for its receipts before the next begins.
+- A step that is fully blocked (0 executable) or whose transactions fail
+  on-chain **halts** the remaining, presumably dependent, steps.
+- A funds-capped step runs what it can afford, then continues.
+
+Because feasibility on a live chain can't be known until earlier steps land,
+staged execution signs the earlier steps for real before the later ones are
+verified. Simulation still runs before **every** step, and one up-front
+confirmation gates the whole run. Pass `--no-staged` to force the single-shot
+up-front planner instead.
+
 ### Revert diagnostics
 
 When simulation detects a revert, Foop decodes the real reason from the revert
@@ -178,5 +198,5 @@ Foop does not custody private keys. All transactions are normal user-authorized 
 ## Roadmap
 
 - **V1** — Web UI: define, simulate, execute, observe
-- **V1.5** — Saved workloads, workload history, reusable templates *(CLI: shipped)*; multi-step workloads with inter-step data passing *(in progress)*
+- **V1.5** — Saved workloads, workload history, reusable templates *(CLI: shipped)*; multi-step dependent workloads via staged live re-simulation *(CLI: shipped)*; inter-step data passing *(in progress)*
 - **V2** — CLI, CI/CD, workload files, team sharing, agent-callable execution API
